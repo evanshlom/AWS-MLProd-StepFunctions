@@ -1,0 +1,13 @@
+FROM python:3.9-slim
+
+WORKDIR /opt/ml
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY src/inference.py ./code/
+
+ENV PYTHONPATH=/opt/ml/code
+EXPOSE 8080
+
+ENTRYPOINT ["python", "code/inference.py"]

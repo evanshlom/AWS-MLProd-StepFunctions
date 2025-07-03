@@ -1,0 +1,55 @@
+{
+  "Comment": "ML Training and Deployment Pipeline",
+  "StartAt": "RunTraining",
+  "States": {
+    "RunTraining": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "TaskDefinition": "ml-training-task",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets.$": "$.subnets",
+            "SecurityGroups.$": "$.securityGroups",
+            "AssignPublicIp": "ENABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [{
+            "Name": "training",
+            "Environment": [{
+              "Name": "S3_MODEL_BUCKET",
+              "Value.$": "$.s3Bucket"
+            }]
+          }]
+        }
+      },
+      "Next": "DeployModel",
+      "Retry": [{
+        "ErrorEquals": ["States.TaskFailed"],
+        "IntervalSeconds": 30,
+        "MaxAttempts": 2,
+        "BackoffRate": 2
+      }]
+    },
+    "DeployModel": {
+      "Type": "Task", 
+      "Resource": "arn:aws:states:::sagemaker:createEndpoint",
+      "Parameters": {
+        "EndpointName": "simple-ml-endpoint",
+        "EndpointConfigName.$": "$.endpointConfigName"
+      },
+      "End": true,
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "DeploymentFailed"
+      }]
+    },
+    "DeploymentFailed": {
+      "Type": "Fail",
+      "Error": "DeploymentError",
+      "Cause": "Failed to deploy model to SageMaker"
+    }
+  }
+}
