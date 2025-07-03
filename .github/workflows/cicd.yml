@@ -32,14 +32,14 @@ jobs:
       - name: Build and Push Training Image
         run: |
           docker build -f Dockerfile.train -t ml-training .
-          docker tag ml-training:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-training:latest
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-training:latest
+          docker tag ml-training:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-training:latest
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-training:latest
 
       - name: Build and Push Serving Image
         run: |
           docker build -f Dockerfile.serve -t ml-serving .
-          docker tag ml-serving:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-serving:latest
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-serving:latest
+          docker tag ml-serving:latest ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-serving:latest
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-serving:latest
 
       - name: Register ECS Task Definition
         run: |
@@ -54,7 +54,7 @@ jobs:
             "taskRoleArn": "${{ secrets.ECS_TASK_ROLE_ARN }}",
             "containerDefinitions": [{
               "name": "training",
-              "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-training:latest",
+              "image": "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-training:latest",
               "essential": true,
               "logConfiguration": {
                 "logDriver": "awslogs",

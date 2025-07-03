@@ -32,8 +32,8 @@ simple-ml-pipeline/
    aws s3 mb s3://your-ml-models-bucket
    
    # Create ECR repositories
-   aws ecr create-repository --repository-name ml-training
-   aws ecr create-repository --repository-name ml-serving
+   aws ecr create-repository --repository-name demo2/ml-training
+   aws ecr create-repository --repository-name demo2/ml-serving
    ```
 
 2. **GitHub Secrets**
