@@ -81,7 +81,7 @@ jobs:
           # Create SageMaker Model
           aws sagemaker create-model \
             --model-name "ml-model-${TIMESTAMP}" \
-            --primary-container Image="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ml-serving:latest",Mode=SingleModel,Environment={MODEL_S3_PATH="s3://${{ secrets.S3_MODEL_BUCKET }}/models/model-${TIMESTAMP}.joblib"} \
+            --primary-container Image="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-serving:latest",Mode=SingleModel,Environment={MODEL_S3_PATH="s3://${{ secrets.S3_MODEL_BUCKET }}/models/model-${TIMESTAMP}.joblib"} \
             --execution-role-arn "${{ secrets.SAGEMAKER_ROLE_ARN }}"
           
           # Create Endpoint Config
