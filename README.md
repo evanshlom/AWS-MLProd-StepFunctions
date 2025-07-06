@@ -32,8 +32,8 @@ simple-ml-pipeline/
    aws s3 mb s3://your-ml-models-bucket
    
    # Create ECR repositories
-   aws ecr create-repository --repository-name demo2/ml-training
-   aws ecr create-repository --repository-name demo2/ml-serving
+   aws ecr create-repository --repository-name ml-training
+   aws ecr create-repository --repository-name ml-serving
    ```
 
 2. **GitHub Secrets**
@@ -64,7 +64,11 @@ simple-ml-pipeline/
 2. Watch Step Functions console for progress
 3. Test endpoint after deployment:
    ```bash
-   python scripts/test_endpoint.py
+   cd final_test
+   docker build -f Dockerfile.test_endpoint -t test-endpoint .
+   docker run -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+     -e AWS_DEFAULT_REGION=us-east-1 test-endpoint
    ```
 
 ## Architecture
