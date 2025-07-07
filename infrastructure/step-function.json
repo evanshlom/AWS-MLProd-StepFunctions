@@ -74,22 +74,73 @@
         }]
       },
       "ResultPath": "$.configResult",
-      "Next": "CreateOrUpdateEndpoint"
+      "Next": "CheckEndpoint"
     },
-    "CreateOrUpdateEndpoint": {
+    "CheckEndpoint": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:describeEndpoint",
+      "Parameters": {
+        "EndpointName": "simple-ml-endpoint"
+      },
+      "ResultPath": "$.existingEndpoint",
+      "Catch": [{
+        "ErrorEquals": ["SageMaker.ResourceNotFoundException"],
+        "ResultPath": "$.endpointNotFound",
+        "Next": "CreateEndpoint"
+      }],
+      "Next": "CheckEndpointStatus"
+    },
+    "CheckEndpointStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Or": [
+            {
+              "Variable": "$.existingEndpoint.EndpointStatus",
+              "StringEquals": "Failed"
+            },
+            {
+              "Variable": "$.existingEndpoint.EndpointStatus",
+              "StringEquals": "OutOfService"
+            }
+          ],
+          "Next": "DeleteEndpoint"
+        },
+        {
+          "Variable": "$.existingEndpoint.EndpointStatus",
+          "StringEquals": "InService",
+          "Next": "UpdateEndpoint"
+        }
+      ],
+      "Default": "WaitForEndpoint"
+    },
+    "DeleteEndpoint": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:deleteEndpoint",
+      "Parameters": {
+        "EndpointName": "simple-ml-endpoint"
+      },
+      "ResultPath": "$.deleteResult",
+      "Next": "WaitForDeletion"
+    },
+    "WaitForDeletion": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "CreateEndpoint"
+    },
+    "WaitForEndpoint": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "CheckEndpoint"
+    },
+    "CreateEndpoint": {
       "Type": "Task",
       "Resource": "arn:aws:states:::sagemaker:createEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint",
         "EndpointConfigName.$": "States.Format('ml-config-v{}', $.modelInfo.Item.latest_version.N)"
       },
-      "ResultPath": "$.createEndpointResult",
-      "End": true,
-      "Catch": [{
-        "ErrorEquals": ["States.ALL"],
-        "ResultPath": "$.createEndpointError",
-        "Next": "UpdateEndpoint"
-      }]
+      "End": true
     },
     "UpdateEndpoint": {
       "Type": "Task",
