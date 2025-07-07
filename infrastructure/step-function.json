@@ -78,13 +78,13 @@
     },
     "CheckEndpoint": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::sagemaker:describeEndpoint",
+      "Resource": "arn:aws:states:::aws-sdk:sagemaker:describeEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint"
       },
       "ResultPath": "$.existingEndpoint",
       "Catch": [{
-        "ErrorEquals": ["SageMaker.ResourceNotFoundException"],
+        "ErrorEquals": ["ResourceNotFound"],
         "ResultPath": "$.endpointNotFound",
         "Next": "CreateEndpoint"
       }],
@@ -105,18 +105,13 @@
             }
           ],
           "Next": "DeleteEndpoint"
-        },
-        {
-          "Variable": "$.existingEndpoint.EndpointStatus",
-          "StringEquals": "InService",
-          "Next": "UpdateEndpoint"
         }
       ],
-      "Default": "WaitForEndpoint"
+      "Default": "UpdateEndpoint"
     },
     "DeleteEndpoint": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::sagemaker:deleteEndpoint",
+      "Resource": "arn:aws:states:::aws-sdk:sagemaker:deleteEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint"
       },
@@ -127,11 +122,6 @@
       "Type": "Wait",
       "Seconds": 30,
       "Next": "CreateEndpoint"
-    },
-    "WaitForEndpoint": {
-      "Type": "Wait",
-      "Seconds": 30,
-      "Next": "CheckEndpoint"
     },
     "CreateEndpoint": {
       "Type": "Task",
