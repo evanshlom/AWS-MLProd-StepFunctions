@@ -1,5 +1,8 @@
 import boto3
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def test_endpoint():
     client = boto3.client('sagemaker-runtime', region_name='us-east-1')
