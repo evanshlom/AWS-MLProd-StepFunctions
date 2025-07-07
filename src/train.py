@@ -28,32 +28,45 @@ def train():
     model.fit(X_train, y_train)
     accuracy = model.score(X_test, y_test)
     
+    # Get current version from DynamoDB and increment
+    dynamodb = boto3.client('dynamodb')
+    try:
+        response = dynamodb.get_item(
+            TableName='MLModelRegistry',
+            Key={'model_type': {'S': 'simple-ml'}}
+        )
+        current_version = int(response.get('Item', {}).get('latest_version', {}).get('N', '0'))
+    except:
+        current_version = 0
+    
+    new_version = current_version + 1
+    
     # Save model locally
     local_model_path = '/tmp/model.joblib'
     joblib.dump(model, local_model_path)
     
-    # Upload to S3
+    # Upload to S3 with version number
     s3 = boto3.client('s3')
-    s3_key = f'models/model-{timestamp}.joblib'
+    s3_key = f'models/model-v{new_version}.joblib'
     
     s3.upload_file(local_model_path, bucket, s3_key)
     
-    # Write to DynamoDB
-    dynamodb = boto3.client('dynamodb')
+    # Write to DynamoDB with version number
     dynamodb.put_item(
         TableName='MLModelRegistry',
         Item={
             'model_type': {'S': 'simple-ml'},
-            'latest_version': {'N': str(int(time.time()))},
+            'latest_version': {'N': str(new_version)},
             's3_path': {'S': f's3://{bucket}/{s3_key}'},
             'accuracy': {'N': str(accuracy)},
-            'timestamp': {'S': timestamp}
+            'timestamp': {'S': timestamp},
+            'version': {'N': str(new_version)}
         }
     )
     
     print(f"Model trained. Accuracy: {accuracy:.3f}")
     print(f"Model saved to: s3://{bucket}/{s3_key}")
-    print(f"Model registered in DynamoDB")
+    print(f"Model registered in DynamoDB with version: {new_version}")
 
 if __name__ == "__main__":
     train()

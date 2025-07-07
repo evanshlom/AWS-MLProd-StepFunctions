@@ -48,7 +48,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sagemaker:createModel",
       "Parameters": {
-        "ModelName.$": "States.Format('ml-model-{}', $.timestamp)",
+        "ModelName.$": "States.Format('ml-model-v{}', $.modelInfo.Item.latest_version.N)",
         "PrimaryContainer": {
           "Image.$": "$.servingImage",
           "Mode": "SingleModel",
@@ -65,10 +65,10 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sagemaker:createEndpointConfig",
       "Parameters": {
-        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)",
+        "EndpointConfigName.$": "States.Format('ml-config-v{}', $.modelInfo.Item.latest_version.N)",
         "ProductionVariants": [{
           "VariantName": "primary",
-          "ModelName.$": "States.Format('ml-model-{}', $.timestamp)",
+          "ModelName.$": "States.Format('ml-model-v{}', $.modelInfo.Item.latest_version.N)",
           "InstanceType": "ml.t2.medium",
           "InitialInstanceCount": 1
         }]
@@ -81,7 +81,7 @@
       "Resource": "arn:aws:states:::sagemaker:createEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint",
-        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)"
+        "EndpointConfigName.$": "States.Format('ml-config-v{}', $.modelInfo.Item.latest_version.N)"
       },
       "ResultPath": "$.createEndpointResult",
       "End": true,
@@ -96,7 +96,7 @@
       "Resource": "arn:aws:states:::sagemaker:updateEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint",
-        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)"
+        "EndpointConfigName.$": "States.Format('ml-config-v{}', $.modelInfo.Item.latest_version.N)"
       },
       "End": true
     }
