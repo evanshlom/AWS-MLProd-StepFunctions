@@ -24,6 +24,18 @@ simple-ml-pipeline/
     └── test_endpoint.py
 ```
 
+## Deployment Flow
+
+**Each step is a separate state in the state machine, passing data through the pipeline.**
+
+Step Functions handles the complete pipeline: train → create model → create config → deploy endpoint.
+
+- ResultPath - Training output goes to $.trainingResult
+- Complete pipeline - Step Functions owns the entire ML workflow
+- No duplication - GitHub Actions just builds/triggers, Step Functions does all ML ops
+- Error handling - If endpoint exists, it updates instead of failing
+
+
 ## Setup Instructions
 
 1. **AWS Prerequisites**

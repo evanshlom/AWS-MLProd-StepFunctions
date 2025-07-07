@@ -3,7 +3,6 @@ name: Train and Deploy ML Model
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
@@ -78,19 +77,8 @@ jobs:
           SUBNET_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(echo $VPC_CONFIG | jq -r .VpcId)" --query "Subnets[*].SubnetId" --output json)
           SECURITY_GROUP=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=default" --query "SecurityGroups[0].GroupId" --output text)
           
-          # Create SageMaker Model
-          aws sagemaker create-model \
-            --model-name "ml-model-${TIMESTAMP}" \
-            --primary-container Image="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-serving:latest",Mode=SingleModel,Environment={MODEL_S3_PATH="s3://${{ secrets.S3_MODEL_BUCKET }}/models/model-${TIMESTAMP}.joblib"} \
-            --execution-role-arn "${{ secrets.SAGEMAKER_ROLE_ARN }}"
-          
-          # Create Endpoint Config
-          aws sagemaker create-endpoint-config \
-            --endpoint-config-name "ml-config-${TIMESTAMP}" \
-            --production-variants VariantName=primary,ModelName="ml-model-${TIMESTAMP}",InstanceType=ml.t2.medium,InitialInstanceCount=1
-          
           # Execute Step Function
           aws stepfunctions start-execution \
             --state-machine-arn "arn:aws:states:${{ env.AWS_REGION }}:${{ env.AWS_ACCOUNT_ID }}:stateMachine:ml-training-pipeline" \
             --name "training-${TIMESTAMP}" \
-            --input "{\"s3Bucket\":\"${{ secrets.S3_MODEL_BUCKET }}\",\"subnets\":${SUBNET_IDS},\"securityGroups\":[\"${SECURITY_GROUP}\"],\"endpointConfigName\":\"ml-config-${TIMESTAMP}\"}"
+            --input "{\"s3Bucket\":\"${{ secrets.S3_MODEL_BUCKET }}\",\"subnets\":${SUBNET_IDS},\"securityGroups\":[\"${SECURITY_GROUP}\"],\"timestamp\":\"${TIMESTAMP}\",\"servingImage\":\"${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/demo2/ml-serving:latest\",\"sagemakerRoleArn\":\"${{ secrets.SAGEMAKER_ROLE_ARN }}\"}"

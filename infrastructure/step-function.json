@@ -26,31 +26,62 @@
           }]
         }
       },
-      "Next": "DeployModel",
-      "Retry": [{
-        "ErrorEquals": ["States.TaskFailed"],
-        "IntervalSeconds": 30,
-        "MaxAttempts": 2,
-        "BackoffRate": 2
-      }]
+      "ResultPath": "$.trainingResult",
+      "Next": "CreateModel"
     },
-    "DeployModel": {
-      "Type": "Task", 
+    "CreateModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:createModel",
+      "Parameters": {
+        "ModelName.$": "States.Format('ml-model-{}', $.timestamp)",
+        "PrimaryContainer": {
+          "Image.$": "$.servingImage",
+          "Mode": "SingleModel",
+          "Environment": {
+            "MODEL_S3_PATH.$": "States.Format('s3://{}/models/model-{}.joblib', $.s3Bucket, $.timestamp)"
+          }
+        },
+        "ExecutionRoleArn.$": "$.sagemakerRoleArn"
+      },
+      "ResultPath": "$.modelResult",
+      "Next": "CreateEndpointConfig"
+    },
+    "CreateEndpointConfig": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:createEndpointConfig",
+      "Parameters": {
+        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)",
+        "ProductionVariants": [{
+          "VariantName": "primary",
+          "ModelName.$": "States.Format('ml-model-{}', $.timestamp)",
+          "InstanceType": "ml.t2.medium",
+          "InitialInstanceCount": 1
+        }]
+      },
+      "ResultPath": "$.configResult",
+      "Next": "CreateOrUpdateEndpoint"
+    },
+    "CreateOrUpdateEndpoint": {
+      "Type": "Task",
       "Resource": "arn:aws:states:::sagemaker:createEndpoint",
       "Parameters": {
         "EndpointName": "simple-ml-endpoint",
-        "EndpointConfigName.$": "$.endpointConfigName"
+        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)"
       },
       "End": true,
       "Catch": [{
         "ErrorEquals": ["States.ALL"],
-        "Next": "DeploymentFailed"
+        "Next": "UpdateEndpoint"
       }]
     },
-    "DeploymentFailed": {
-      "Type": "Fail",
-      "Error": "DeploymentError",
-      "Cause": "Failed to deploy model to SageMaker"
+    "UpdateEndpoint": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:updateEndpoint",
+      "Parameters": {
+        "EndpointName": "simple-ml-endpoint",
+        "EndpointConfigName.$": "States.Format('ml-config-{}', $.timestamp)"
+      },
+      "End": true
     }
   }
 }
