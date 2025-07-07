@@ -5,12 +5,19 @@ from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from datetime import datetime
+import time
 
 def train():
     # Get S3 bucket from environment
     bucket = os.environ.get('S3_MODEL_BUCKET')
     if not bucket:
         raise ValueError("S3_MODEL_BUCKET environment variable not set")
+    
+    # Get timestamp from environment (passed by Step Functions)
+    timestamp = os.environ.get('TIMESTAMP')
+    if not timestamp:
+        # Fallback to generating timestamp if not provided
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     
     # Generate dataset
     X, y = make_classification(n_samples=1000, n_features=4, n_classes=2, random_state=42)
@@ -27,24 +34,26 @@ def train():
     
     # Upload to S3
     s3 = boto3.client('s3')
-    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     s3_key = f'models/model-{timestamp}.joblib'
     
     s3.upload_file(local_model_path, bucket, s3_key)
     
-    # Output for Step Functions
-    output = {
-        'model_s3_path': f's3://{bucket}/{s3_key}',
-        'accuracy': accuracy,
-        'timestamp': timestamp
-    }
+    # Write to DynamoDB
+    dynamodb = boto3.client('dynamodb')
+    dynamodb.put_item(
+        TableName='MLModelRegistry',
+        Item={
+            'model_type': {'S': 'simple-ml'},
+            'latest_version': {'N': str(int(time.time()))},
+            's3_path': {'S': f's3://{bucket}/{s3_key}'},
+            'accuracy': {'N': str(accuracy)},
+            'timestamp': {'S': timestamp}
+        }
+    )
     
     print(f"Model trained. Accuracy: {accuracy:.3f}")
-    print(f"Model saved to: {output['model_s3_path']}")
-    
-    # Write output for Step Functions to read
-    with open('/tmp/training_output.txt', 'w') as f:
-        f.write(f"{bucket}|{s3_key}|{timestamp}")
+    print(f"Model saved to: s3://{bucket}/{s3_key}")
+    print(f"Model registered in DynamoDB")
 
 if __name__ == "__main__":
     train()

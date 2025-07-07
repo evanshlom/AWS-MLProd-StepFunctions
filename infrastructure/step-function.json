@@ -22,11 +22,26 @@
             "Environment": [{
               "Name": "S3_MODEL_BUCKET",
               "Value.$": "$.s3Bucket"
+            }, {
+              "Name": "TIMESTAMP",
+              "Value.$": "$.timestamp"
             }]
           }]
         }
       },
       "ResultPath": "$.trainingResult",
+      "Next": "GetLatestModel"
+    },
+    "GetLatestModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "MLModelRegistry",
+        "Key": {
+          "model_type": {"S": "simple-ml"}
+        }
+      },
+      "ResultPath": "$.modelInfo",
       "Next": "CreateModel"
     },
     "CreateModel": {
@@ -38,7 +53,7 @@
           "Image.$": "$.servingImage",
           "Mode": "SingleModel",
           "Environment": {
-            "MODEL_S3_PATH.$": "States.Format('s3://{}/models/model-{}.joblib', $.s3Bucket, $.timestamp)"
+            "MODEL_S3_PATH.$": "$.modelInfo.Item.s3_path.S"
           }
         },
         "ExecutionRoleArn.$": "$.sagemakerRoleArn"
